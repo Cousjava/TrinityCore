@@ -1846,6 +1846,11 @@ void World::SetInitialWorldSettings()
     ///- Initialize game time and timers
     TC_LOG_INFO("server.loading", "Initialize game time and timers");
     m_gameTime = time(NULL);
+    
+    tm modifiedTime = *localtime(&m_gameTime);
+    modifiedTime.tm_hour -= 8;
+    m_gameTime = mktime(&modifiedTime);
+    
     m_startTime = m_gameTime;
 
     LoginDatabase.PExecute("INSERT INTO uptime (realmid, starttime, uptime, revision) VALUES(%u, %u, 0, '%s')",
