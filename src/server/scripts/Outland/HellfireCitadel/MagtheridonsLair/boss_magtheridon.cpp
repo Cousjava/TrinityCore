@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -476,6 +476,7 @@ public:
     }
 };
 
+// 30541 - Blaze
 class spell_magtheridon_blaze_target : public SpellScriptLoader
 {
     public:
@@ -510,6 +511,7 @@ class spell_magtheridon_blaze_target : public SpellScriptLoader
         }
 };
 
+// 30410 - Shadow Grasp
 class spell_magtheridon_shadow_grasp : public SpellScriptLoader
 {
     public:
@@ -545,6 +547,7 @@ class spell_magtheridon_shadow_grasp : public SpellScriptLoader
         }
 };
 
+// 30166 - Shadow Grasp (Visual Effect)
 class spell_magtheridon_shadow_grasp_visual : public SpellScriptLoader
 {
     public:

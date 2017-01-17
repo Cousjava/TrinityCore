@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -122,7 +122,7 @@ Position const DespawnPoint = { 497.4939f, 183.2081f, 94.53341f };
 
 class EnslavedSoulEvent : public BasicEvent
 {
-    public: explicit EnslavedSoulEvent(Creature* owner) : _owner(owner) { }
+    public: EnslavedSoulEvent(Creature* owner) : _owner(owner) { }
 
         bool Execute(uint64 /*time*/, uint32 /*diff*/) override
         {
@@ -711,6 +711,7 @@ public:
     }
 };
 
+// 41350 - Aura of Desire
 class spell_reliquary_of_souls_aura_of_desire : public SpellScriptLoader
 {
     public:
@@ -758,6 +759,7 @@ class spell_reliquary_of_souls_aura_of_desire : public SpellScriptLoader
         }
 };
 
+// 28819 - Submerge Visual
 class spell_reliquary_of_souls_submerge : public SpellScriptLoader
 {
     public:
@@ -791,6 +793,7 @@ class spell_reliquary_of_souls_submerge : public SpellScriptLoader
         }
 };
 
+// 41376 - Spite
 class spell_reliquary_of_souls_spite : public SpellScriptLoader
 {
     public:
@@ -825,6 +828,7 @@ class spell_reliquary_of_souls_spite : public SpellScriptLoader
         }
 };
 
+// 41305 - Frenzy
 class spell_reliquary_of_souls_frenzy : public SpellScriptLoader
 {
     public:

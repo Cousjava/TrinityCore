@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -551,8 +551,9 @@ enum SMART_ACTION
     SMART_ACTION_RANDOM_SOUND                       = 115,    // soundId1, soundId2, soundId3, soundId4, soundId5, onlySelf
     SMART_ACTION_SET_CORPSE_DELAY                   = 116,    // timer
     SMART_ACTION_DISABLE_EVADE                      = 117,    // 0/1 (1 = disabled, 0 = enabled)
+    SMART_ACTION_GO_SET_GO_STATE                    = 118,    // state
 
-    SMART_ACTION_END                                = 118
+    SMART_ACTION_END                                = 119
 };
 
 struct SmartAction
@@ -1011,6 +1012,11 @@ struct SmartAction
         {
             uint32 flag;
         } goFlag;
+
+        struct
+        {
+            uint32 state;
+        } goState;
 
         struct
         {
