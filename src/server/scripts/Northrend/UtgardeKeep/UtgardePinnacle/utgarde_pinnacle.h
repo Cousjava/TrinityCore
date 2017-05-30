@@ -23,7 +23,7 @@
 
 uint32 const EncounterCount = 4;
 
-enum DataTypes
+enum UPDataTypes
 {
     // Encounter States/Boss GUIDs
     DATA_SVALA_SORROWGRAVE          = 0,
@@ -45,7 +45,7 @@ enum DataTypes
     DATA_GRAUF                      = 13
 };
 
-enum CreatureIds
+enum UPCreatureIds
 {
     // Bosses
     NPC_SVALA_SORROWGRAVE           = 26668,
@@ -87,7 +87,7 @@ enum CreatureIds
     NPC_AVENGING_SPIRIT             = 27386
 };
 
-enum GameObjectIds
+enum UPGameObjectIds
 {
     GO_GORTOK_PALEHOOF_SPHERE       = 188593,
     GO_UTGARDE_MIRROR               = 191745,
@@ -95,10 +95,10 @@ enum GameObjectIds
     GO_KING_YMIRON_DOOR             = 192174
 };
 
-template<class AI>
-AI* GetUtgardePinnacleAI(Creature* creature)
+template<class AI, class T>
+AI* GetUtgardePinnacleAI(T* obj)
 {
-    return GetInstanceAI<AI>(creature, UPScriptName);
+    return GetInstanceAI<AI>(obj, UPScriptName);
 }
 
 #endif // UTGARDE_PINNACLE_H_

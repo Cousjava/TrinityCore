@@ -182,7 +182,7 @@ void AuctionHouseMgr::SendAuctionWonMail(AuctionEntry* auction, SQLTransaction& 
     else
     {
         // bidder doesn't exist, delete the item
-        sAuctionMgr->RemoveAItem(auction->itemGUIDLow, true);
+        sAuctionMgr->RemoveAItem(auction->itemGUIDLow, true, &trans);
     }
 }
 
@@ -247,7 +247,7 @@ void AuctionHouseMgr::SendAuctionExpiredMail(AuctionEntry* auction, SQLTransacti
     else
     {
         // owner doesn't exist, delete the item
-        sAuctionMgr->RemoveAItem(auction->itemGUIDLow, true);
+        sAuctionMgr->RemoveAItem(auction->itemGUIDLow, true, &trans);
     }
 }
 
@@ -392,7 +392,7 @@ void AuctionHouseMgr::AddAItem(Item* it)
     mAitems[it->GetGUID().GetCounter()] = it;
 }
 
-bool AuctionHouseMgr::RemoveAItem(ObjectGuid::LowType id, bool deleteItem)
+bool AuctionHouseMgr::RemoveAItem(ObjectGuid::LowType id, bool deleteItem /*= false*/, SQLTransaction* trans /*= nullptr*/)
 {
     ItemMap::iterator i = mAitems.find(id);
     if (i == mAitems.end())
@@ -400,9 +400,9 @@ bool AuctionHouseMgr::RemoveAItem(ObjectGuid::LowType id, bool deleteItem)
 
     if (deleteItem)
     {
-        SQLTransaction trans = SQLTransaction(nullptr);
+        ASSERT(trans);
         i->second->FSetState(ITEM_REMOVED);
-        i->second->SaveToDB(trans);
+        i->second->SaveToDB(*trans);
     }
 
     mAitems.erase(i);
@@ -682,7 +682,7 @@ void AuctionHouseObject::BuildListAuctionItems(WorldPacket& data, Player* player
     uint32 inventoryType, uint32 itemClass, uint32 itemSubClass, uint32 quality,
     uint32& count, uint32& totalcount, bool getall)
 {
-    int loc_idx = player->GetSession()->GetSessionDbLocaleIndex();
+    LocaleConstant localeConstant = player->GetSession()->GetSessionDbLocaleIndex();
     int locdbc_idx = player->GetSession()->GetSessionDbcLocale();
 
     time_t curTime = GameTime::GetGameTime();
@@ -754,9 +754,9 @@ void AuctionHouseObject::BuildListAuctionItems(WorldPacket& data, Player* player
                 continue;
 
             // local name
-            if (loc_idx >= 0)
+            if (localeConstant >= LOCALE_enUS)
                 if (ItemLocale const* il = sObjectMgr->GetItemLocale(proto->ItemId))
-                    ObjectMgr::GetLocaleString(il->Name, loc_idx, name);
+                    ObjectMgr::GetLocaleString(il->Name, localeConstant, name);
 
             // DO NOT use GetItemEnchantMod(proto->RandomProperty) as it may return a result
             //  that matches the search but it may not equal item->GetItemRandomPropertyId()

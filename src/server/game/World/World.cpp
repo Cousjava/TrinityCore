@@ -47,16 +47,20 @@
 #include "InstanceSaveMgr.h"
 #include "Language.h"
 #include "LFGMgr.h"
+#include "LootItemStorage.h"
 #include "MapManager.h"
 #include "Memory.h"
 #include "MMapFactory.h"
 #include "ObjectMgr.h"
 #include "OutdoorPvPMgr.h"
+#include "PetitionMgr.h"
 #include "Player.h"
+#include "PlayerDump.h"
 #include "PoolMgr.h"
 #include "QueryCallback.h"
 #include "ScriptMgr.h"
 #include "ScriptReloadMgr.h"
+#include "ServerMotd.h"
 #include "SkillDiscovery.h"
 #include "SkillExtraItems.h"
 #include "SmartAI.h"
@@ -180,18 +184,6 @@ void World::SetClosed(bool val)
 
     // Invert the value, for simplicity for scripters.
     sScriptMgr->OnOpenStateChange(!val);
-}
-
-void World::SetMotd(const std::string& motd)
-{
-    m_motd = motd;
-
-    sScriptMgr->OnMotdChange(m_motd);
-}
-
-const char* World::GetMotd() const
-{
-    return m_motd.c_str();
 }
 
 /// Find a session by its id
@@ -405,7 +397,7 @@ void World::LoadConfigSettings(bool reload)
 
     ///- Read the player limit and the Message of the day from the config file
     SetPlayerAmountLimit(sConfigMgr->GetIntDefault("PlayerLimit", 100));
-    SetMotd(sConfigMgr->GetStringDefault("Motd", "Welcome to a Trinity Core Server."));
+    Motd::SetMotd(sConfigMgr->GetStringDefault("Motd", "Welcome to a Trinity Core Server."));
 
     ///- Read ticket system setting from the config file
     m_bool_configs[CONFIG_ALLOW_TICKETS] = sConfigMgr->GetBoolDefault("AllowTickets", true);
@@ -743,14 +735,14 @@ void World::LoadConfigSettings(bool reload)
         m_int_configs[CONFIG_CHARACTERS_PER_ACCOUNT] = m_int_configs[CONFIG_CHARACTERS_PER_REALM];
     }
 
-    m_int_configs[CONFIG_HEROIC_CHARACTERS_PER_REALM] = sConfigMgr->GetIntDefault("HeroicCharactersPerRealm", 1);
-    if (int32(m_int_configs[CONFIG_HEROIC_CHARACTERS_PER_REALM]) < 0 || m_int_configs[CONFIG_HEROIC_CHARACTERS_PER_REALM] > 10)
+    m_int_configs[CONFIG_DEATH_KNIGHTS_PER_REALM] = sConfigMgr->GetIntDefault("DeathKnightsPerRealm", 1);
+    if (int32(m_int_configs[CONFIG_DEATH_KNIGHTS_PER_REALM]) < 0 || m_int_configs[CONFIG_DEATH_KNIGHTS_PER_REALM] > 10)
     {
-        TC_LOG_ERROR("server.loading", "HeroicCharactersPerRealm (%i) must be in range 0..10. Set to 1.", m_int_configs[CONFIG_HEROIC_CHARACTERS_PER_REALM]);
-        m_int_configs[CONFIG_HEROIC_CHARACTERS_PER_REALM] = 1;
+        TC_LOG_ERROR("server.loading", "DeathKnightsPerRealm (%i) must be in range 0..10. Set to 1.", m_int_configs[CONFIG_DEATH_KNIGHTS_PER_REALM]);
+        m_int_configs[CONFIG_DEATH_KNIGHTS_PER_REALM] = 1;
     }
 
-    m_int_configs[CONFIG_CHARACTER_CREATING_MIN_LEVEL_FOR_HEROIC_CHARACTER] = sConfigMgr->GetIntDefault("CharacterCreating.MinLevelForHeroicCharacter", 55);
+    m_int_configs[CONFIG_CHARACTER_CREATING_MIN_LEVEL_FOR_DEATH_KNIGHT] = sConfigMgr->GetIntDefault("CharacterCreating.MinLevelForDeathKnight", 55);
 
     m_int_configs[CONFIG_SKIP_CINEMATICS] = sConfigMgr->GetIntDefault("SkipCinematics", 0);
     if (int32(m_int_configs[CONFIG_SKIP_CINEMATICS]) < 0 || m_int_configs[CONFIG_SKIP_CINEMATICS] > 2)
@@ -788,18 +780,18 @@ void World::LoadConfigSettings(bool reload)
         m_int_configs[CONFIG_START_PLAYER_LEVEL] = m_int_configs[CONFIG_MAX_PLAYER_LEVEL];
     }
 
-    m_int_configs[CONFIG_START_HEROIC_PLAYER_LEVEL] = sConfigMgr->GetIntDefault("StartHeroicPlayerLevel", 55);
-    if (m_int_configs[CONFIG_START_HEROIC_PLAYER_LEVEL] < 1)
+    m_int_configs[CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL] = sConfigMgr->GetIntDefault("StartDeathKnightPlayerLevel", 55);
+    if (m_int_configs[CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL] < 1)
     {
-        TC_LOG_ERROR("server.loading", "StartHeroicPlayerLevel (%i) must be in range 1..MaxPlayerLevel(%u). Set to 55.",
-            m_int_configs[CONFIG_START_HEROIC_PLAYER_LEVEL], m_int_configs[CONFIG_MAX_PLAYER_LEVEL]);
-        m_int_configs[CONFIG_START_HEROIC_PLAYER_LEVEL] = 55;
+        TC_LOG_ERROR("server.loading", "StartDeathKnightPlayerLevel (%i) must be in range 1..MaxPlayerLevel(%u). Set to 55.",
+            m_int_configs[CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL], m_int_configs[CONFIG_MAX_PLAYER_LEVEL]);
+        m_int_configs[CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL] = 55;
     }
-    else if (m_int_configs[CONFIG_START_HEROIC_PLAYER_LEVEL] > m_int_configs[CONFIG_MAX_PLAYER_LEVEL])
+    else if (m_int_configs[CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL] > m_int_configs[CONFIG_MAX_PLAYER_LEVEL])
     {
-        TC_LOG_ERROR("server.loading", "StartHeroicPlayerLevel (%i) must be in range 1..MaxPlayerLevel(%u). Set to %u.",
-            m_int_configs[CONFIG_START_HEROIC_PLAYER_LEVEL], m_int_configs[CONFIG_MAX_PLAYER_LEVEL], m_int_configs[CONFIG_MAX_PLAYER_LEVEL]);
-        m_int_configs[CONFIG_START_HEROIC_PLAYER_LEVEL] = m_int_configs[CONFIG_MAX_PLAYER_LEVEL];
+        TC_LOG_ERROR("server.loading", "StartDeathKnightPlayerLevel (%i) must be in range 1..MaxPlayerLevel(%u). Set to %u.",
+            m_int_configs[CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL], m_int_configs[CONFIG_MAX_PLAYER_LEVEL], m_int_configs[CONFIG_MAX_PLAYER_LEVEL]);
+        m_int_configs[CONFIG_START_DEATH_KNIGHT_PLAYER_LEVEL] = m_int_configs[CONFIG_MAX_PLAYER_LEVEL];
     }
 
     m_int_configs[CONFIG_START_PLAYER_MONEY] = sConfigMgr->GetIntDefault("StartPlayerMoney", 0);
@@ -1167,7 +1159,7 @@ void World::LoadConfigSettings(bool reload)
     ///- Load the CharDelete related config options
     m_int_configs[CONFIG_CHARDELETE_METHOD] = sConfigMgr->GetIntDefault("CharDelete.Method", 0);
     m_int_configs[CONFIG_CHARDELETE_MIN_LEVEL] = sConfigMgr->GetIntDefault("CharDelete.MinLevel", 0);
-    m_int_configs[CONFIG_CHARDELETE_HEROIC_MIN_LEVEL] = sConfigMgr->GetIntDefault("CharDelete.Heroic.MinLevel", 0);
+    m_int_configs[CONFIG_CHARDELETE_DEATH_KNIGHT_MIN_LEVEL] = sConfigMgr->GetIntDefault("CharDelete.DeathKnight.MinLevel", 0);
     m_int_configs[CONFIG_CHARDELETE_KEEP_DAYS] = sConfigMgr->GetIntDefault("CharDelete.KeepDays", 30);
 
     // No aggro from gray mobs
@@ -1194,7 +1186,7 @@ void World::LoadConfigSettings(bool reload)
     if (dataPath.empty() || (dataPath.at(dataPath.length()-1) != '/' && dataPath.at(dataPath.length()-1) != '\\'))
         dataPath.push_back('/');
 
-#if PLATFORM == PLATFORM_UNIX || PLATFORM == PLATFORM_APPLE
+#if TRINITY_PLATFORM == TRINITY_PLATFORM_UNIX || TRINITY_PLATFORM == TRINITY_PLATFORM_APPLE
     if (dataPath[0] == '~')
     {
         const char* home = getenv("HOME");
@@ -1441,6 +1433,9 @@ void World::SetInitialWorldSettings()
 
     MMAP::MMapManager* mmmgr = MMAP::MMapFactory::createOrGetMMapManager();
     mmmgr->InitializeThreadUnsafe(mapIds);
+
+    TC_LOG_INFO("server.loading", "Initializing PlayerDump tables...");
+    PlayerDump::InitializeTables();
 
     TC_LOG_INFO("server.loading", "Loading SpellInfo store...");
     sSpellMgr->LoadSpellInfoStore();
@@ -1851,6 +1846,15 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading Calendar data...");
     sCalendarMgr->LoadFromDB();
+
+    TC_LOG_INFO("server.loading", "Loading Petitions...");
+    sPetitionMgr->LoadPetitions();
+
+    TC_LOG_INFO("server.loading", "Loading Signatures...");
+    sPetitionMgr->LoadSignatures();
+
+    TC_LOG_INFO("server.loading", "Loading Item loot...");
+    sLootItemStorage->LoadStorageFromDB();
 
     TC_LOG_INFO("server.loading", "Initialize query data...");
     sObjectMgr->InitializeQueriesData(QUERY_DATA_ALL);

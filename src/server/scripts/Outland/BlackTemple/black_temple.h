@@ -23,7 +23,7 @@
 
 uint32 const EncounterCount         = 9;
 
-enum DataTypes
+enum BTDataTypes
 {
     // Encounter States
     DATA_HIGH_WARLORD_NAJENTUS      = 0,
@@ -65,7 +65,7 @@ enum TriggerEmotes
     EMOTE_DEN_OF_MORTAL_DOOR_OPEN    = 1
 };
 
-enum CreatureIds
+enum BTCreatureIds
 {
     //Bosses
     NPC_HIGH_WARLORD_NAJENTUS       = 22887,
@@ -109,7 +109,7 @@ enum CreatureIds
     NPC_DEMON_FIRE                  = 23069
 };
 
-enum GameObjectIds
+enum BTGameObjectIds
 {
     GO_NAJENTUS_GATE                = 185483,
     GO_NAJENTUS_SPINE               = 185584,
@@ -131,7 +131,6 @@ enum GameObjectIds
 
 enum BlackTempleMisc
 {
-    ASHTONGUE_FACTION_FRIEND        = 1820,
     AKAMA_FACTION_COMBAT            = 1868,
     AKAMA_INTRO                     = 1,
     AKAMA_FIGHT                     = 2,
@@ -139,10 +138,10 @@ enum BlackTempleMisc
     ACTION_OPEN_DOOR                = 4
 };
 
-template<class AI>
-AI* GetBlackTempleAI(Creature* creature)
+template<class AI, class T>
+AI* GetBlackTempleAI(T* obj)
 {
-    return GetInstanceAI<AI>(creature, BTScriptName);
+    return GetInstanceAI<AI>(obj, BTScriptName);
 }
 
 #endif // BLACK_TEMPLE_H_

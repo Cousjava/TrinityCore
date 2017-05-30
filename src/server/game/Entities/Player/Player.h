@@ -51,6 +51,7 @@ class Group;
 class Guild;
 class OutdoorPvP;
 class Pet;
+class PetAura;
 class PlayerMenu;
 class PlayerSocial;
 class SpellCastTargets;
@@ -1047,8 +1048,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SetObjectScale(float scale) override
         {
             Unit::SetObjectScale(scale);
-            SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, scale * DEFAULT_WORLD_OBJECT_SIZE);
-            SetFloatValue(UNIT_FIELD_COMBATREACH, scale * DEFAULT_COMBAT_REACH);
+            SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, scale * DEFAULT_PLAYER_BOUNDING_RADIUS);
+            SetFloatValue(UNIT_FIELD_COMBATREACH, scale * DEFAULT_PLAYER_COMBAT_REACH);
         }
 
         bool TeleportTo(uint32 mapid, float x, float y, float z, float orientation, uint32 options = 0);
@@ -1152,6 +1153,11 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         Pet* SummonPet(uint32 entry, float x, float y, float z, float ang, PetType petType, uint32 despwtime);
         void RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent = false);
         uint32 GetPhaseMaskForSpawn() const;                // used for proper set phase for DB at GM-mode creature/GO spawn
+
+        // pet auras
+        std::unordered_set<PetAura const*> m_petAuras;
+        void AddPetAura(PetAura const* petSpell);
+        void RemovePetAura(PetAura const* petSpell);
 
         /// Handles said message in regular chat based on declared language and in config pre-defined Range.
         void Say(std::string const& text, Language language, WorldObject const* = nullptr) override;
@@ -1349,19 +1355,19 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool SatisfyQuestSkill(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestLevel(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestLog(bool msg) const;
-        bool SatisfyQuestPreviousQuest(Quest const* qInfo, bool msg);
+        bool SatisfyQuestDependentQuests(Quest const* qInfo, bool msg) const;
+        bool SatisfyQuestPreviousQuest(Quest const* qInfo, bool msg) const;
+        bool SatisfyQuestDependentPreviousQuests(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestClass(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestRace(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestReputation(Quest const* qInfo, bool msg);
         bool SatisfyQuestStatus(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestConditions(Quest const* qInfo, bool msg);
         bool SatisfyQuestTimed(Quest const* qInfo, bool msg) const;
-        bool SatisfyQuestExclusiveGroup(Quest const* qInfo, bool msg);
-        bool SatisfyQuestNextChain(Quest const* qInfo, bool msg) const;
-        bool SatisfyQuestPrevChain(Quest const* qInfo, bool msg);
+        bool SatisfyQuestExclusiveGroup(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestDay(Quest const* qInfo, bool msg) const;
-        bool SatisfyQuestWeek(Quest const* qInfo, bool msg);
-        bool SatisfyQuestMonth(Quest const* qInfo, bool msg);
+        bool SatisfyQuestWeek(Quest const* qInfo, bool msg) const;
+        bool SatisfyQuestMonth(Quest const* qInfo, bool msg) const;
         bool SatisfyQuestSeasonal(Quest const* qInfo, bool msg) const;
         bool GiveQuestSourceItem(Quest const* quest);
         bool TakeQuestSourceItem(uint32 questId, bool msg);
@@ -1419,7 +1425,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SendQuestTimerFailed(uint32 questId) const;
         void SendCanTakeQuestResponse(QuestFailedReason msg) const;
         void SendQuestConfirmAccept(Quest const* quest, Player* pReceiver) const;
-        void SendPushToPartyResponse(Player* player, uint8 msg) const;
+        void SendPushToPartyResponse(Player const* player, uint8 msg) const;
         void SendQuestUpdateAddItem(Quest const* quest, uint32 itemIdx, uint16 count) const;
         void SendQuestUpdateAddCreatureOrGo(Quest const* quest, ObjectGuid guid, uint32 creatureOrGOIdx, uint16 oldCount, uint16 addCount);
         void SendQuestUpdateAddPlayer(Quest const* quest, uint16 oldCount, uint16 addCount);
@@ -1548,7 +1554,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         bool HasActiveSpell(uint32 spell) const;            // show in spellbook
         TrainerSpellState GetTrainerSpellState(TrainerSpell const* trainer_spell) const;
         bool IsSpellFitByClassAndRace(uint32 spell_id) const;
-        bool IsNeedCastPassiveSpellAtLearn(SpellInfo const* spellInfo) const;
+        bool HandlePassiveSpellLearn(SpellInfo const* spellInfo);
 
         void SendProficiency(ItemClass itemClass, uint32 itemSubclassMask) const;
         void SendInitialSpells();
@@ -1686,7 +1692,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 GetGuildId() const { return GetUInt32Value(PLAYER_GUILDID);  }
         Guild* GetGuild();
         int GetGuildIdInvited() const { return m_GuildIdInvited; }
-        static void RemovePetitionsAndSigns(ObjectGuid guid, uint32 type);
+        static void RemovePetitionsAndSigns(ObjectGuid guid, CharterTypes type);
 
         // Arena Team
         void SetInArenaTeam(uint32 ArenaTeamId, uint8 slot, uint8 type);
@@ -1807,8 +1813,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void SendMessageToSetInRange(WorldPacket const* data, float dist, bool self) override;
         void SendMessageToSetInRange(WorldPacket const* data, float dist, bool self, bool own_team_only);
         void SendMessageToSet(WorldPacket const* data, Player const* skipped_rcvr) override;
-
-        void SendTeleportAckPacket();
 
         Corpse* GetCorpse() const;
         void SpawnCorpseBones(bool triggerSave = true);
@@ -1972,6 +1976,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         void UpdateWeaponDependentAuras(WeaponAttackType attackType);
         void ApplyItemDependentAuras(Item* item, bool apply);
+
+        bool CheckAttackFitToAuraRequirement(WeaponAttackType attackType, AuraEffect const* aurEff) const override;
 
         void _ApplyItemMods(Item* item, uint8 slot, bool apply, bool updateItemAuras = true);
         void _RemoveAllItemMods();

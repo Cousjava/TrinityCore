@@ -394,7 +394,7 @@ void Spell::EffectSchoolDMG(SpellEffIndex effIndex)
                     if (unitTarget->HasAuraState(AURA_STATE_CONFLAGRATE))
                     {
                         if (unitTarget->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_WARLOCK, 0x4, 0, 0))
-                            damage += damage/4;
+                            damage += damage / 4;
                     }
                 }
                 // Conflagrate - consumes Immolate or Shadowflame
@@ -719,24 +719,18 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
     }
 
     // pet auras
-    if (PetAura const* petSpell = sSpellMgr->GetPetAura(m_spellInfo->Id, effIndex))
+    if (m_caster->GetTypeId() == TYPEID_PLAYER)
     {
-        m_caster->AddPetAura(petSpell);
-        return;
+        if (PetAura const* petSpell = sSpellMgr->GetPetAura(m_spellInfo->Id, effIndex))
+        {
+            m_caster->ToPlayer()->AddPetAura(petSpell);
+            return;
+        }
     }
 
     // normal DB scripted effect
     TC_LOG_DEBUG("spells", "Spell ScriptStart spellid %u in EffectDummy(%u)", m_spellInfo->Id, effIndex);
     m_caster->GetMap()->ScriptsStart(sSpellScripts, uint32(m_spellInfo->Id | (effIndex << 24)), m_caster, unitTarget);
-
-    // Script based implementation. Must be used only for not good for implementation in core spell effects
-    // So called only for not proccessed cases
-    if (gameObjTarget)
-        sScriptMgr->OnDummyEffect(m_caster, m_spellInfo->Id, effIndex, gameObjTarget);
-    else if (unitTarget && unitTarget->GetTypeId() == TYPEID_UNIT)
-        sScriptMgr->OnDummyEffect(m_caster, m_spellInfo->Id, effIndex, unitTarget->ToCreature());
-    else if (itemTarget)
-        sScriptMgr->OnDummyEffect(m_caster, m_spellInfo->Id, effIndex, itemTarget);
 }
 
 void Spell::EffectTriggerSpell(SpellEffIndex effIndex)
@@ -1024,12 +1018,9 @@ void Spell::EffectJump(SpellEffIndex effIndex)
     if (!unitTarget)
         return;
 
-    float x, y, z;
-    unitTarget->GetContactPoint(m_caster, x, y, z, CONTACT_DISTANCE);
-
     float speedXY, speedZ;
-    CalculateJumpSpeeds(effIndex, m_caster->GetExactDist2d(x, y), speedXY, speedZ);
-    m_caster->GetMotionMaster()->MoveJump(x, y, z, 0.0f, speedXY, speedZ, EVENT_JUMP, false);
+    CalculateJumpSpeeds(effIndex, m_caster->GetExactDist2d(unitTarget), speedXY, speedZ);
+    m_caster->GetMotionMaster()->MoveJump(*unitTarget, speedXY, speedZ, EVENT_JUMP, false);
 }
 
 void Spell::EffectJumpDest(SpellEffIndex effIndex)
@@ -1865,9 +1856,7 @@ void Spell::SendLoot(ObjectGuid guid, LootType loottype)
             return;
         }
 
-        if (sScriptMgr->OnGossipHello(player, gameObjTarget))
-            return;
-
+        player->PlayerTalkClass->ClearMenus();
         if (gameObjTarget->AI()->GossipHello(player, false))
             return;
 
@@ -2283,7 +2272,7 @@ void Spell::EffectSummonType(SpellEffIndex effIndex)
                         if (properties->Category == SUMMON_CATEGORY_ALLY)
                         {
                             summon->SetOwnerGUID(m_originalCaster->GetGUID());
-                            summon->setFaction(m_originalCaster->getFaction());
+                            summon->SetFaction(m_originalCaster->GetFaction());
                             summon->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
                         }
 
@@ -2324,9 +2313,9 @@ void Spell::EffectSummonType(SpellEffIndex effIndex)
 
             uint32 faction = properties->Faction;
             if (!faction)
-                faction = m_originalCaster->getFaction();
+                faction = m_originalCaster->GetFaction();
 
-            summon->setFaction(faction);
+            summon->SetFaction(faction);
             break;
     }
 
@@ -2490,11 +2479,11 @@ void Spell::EffectDistract(SpellEffIndex /*effIndex*/)
     if (unitTarget->HasUnitState(UNIT_STATE_CONFUSED | UNIT_STATE_STUNNED | UNIT_STATE_FLEEING))
         return;
 
-    unitTarget->SetFacingTo(unitTarget->GetAngle(destTarget));
-    unitTarget->ClearUnitState(UNIT_STATE_MOVING);
-
     if (unitTarget->GetTypeId() == TYPEID_UNIT)
         unitTarget->GetMotionMaster()->MoveDistract(damage * IN_MILLISECONDS);
+
+    unitTarget->StopMoving();
+    unitTarget->SetFacingTo(unitTarget->GetAngle(destTarget));
 }
 
 void Spell::EffectPickPocket(SpellEffIndex /*effIndex*/)
@@ -2565,7 +2554,7 @@ void Spell::EffectTeleUnitsFaceCaster(SpellEffIndex effIndex)
     float dis = m_spellInfo->Effects[effIndex].CalcRadius(m_caster);
 
     float fx, fy, fz;
-    m_caster->GetClosePoint(fx, fy, fz, unitTarget->GetObjectSize(), dis);
+    m_caster->GetClosePoint(fx, fy, fz, unitTarget->GetCombatReach(), dis);
 
     unitTarget->NearTeleportTo(fx, fy, fz, -m_caster->GetOrientation(), unitTarget == m_caster);
 }
@@ -2990,7 +2979,7 @@ void Spell::EffectSummonPet(SpellEffIndex effIndex)
             //OldSummon->GetMap()->Remove(OldSummon->ToCreature(), false);
 
             float px, py, pz;
-            owner->GetClosePoint(px, py, pz, OldSummon->GetObjectSize());
+            owner->GetClosePoint(px, py, pz, OldSummon->GetCombatReach());
 
             OldSummon->NearTeleportTo(px, py, pz, OldSummon->GetOrientation());
             //OldSummon->Relocate(px, py, pz, OldSummon->GetOrientation());
@@ -3016,7 +3005,7 @@ void Spell::EffectSummonPet(SpellEffIndex effIndex)
     }
 
     float x, y, z;
-    owner->GetClosePoint(x, y, z, owner->GetObjectSize());
+    owner->GetClosePoint(x, y, z, owner->GetCombatReach());
     Pet* pet = owner->SummonPet(petentry, x, y, z, owner->GetOrientation(), SUMMON_PET, 0);
     if (!pet)
         return;
@@ -3474,7 +3463,7 @@ void Spell::EffectSummonObjectWild(SpellEffIndex effIndex)
     if (m_targets.HasDst())
         destTarget->GetPosition(x, y, z);
     else
-        m_caster->GetClosePoint(x, y, z, DEFAULT_WORLD_OBJECT_SIZE);
+        m_caster->GetClosePoint(x, y, z, DEFAULT_PLAYER_BOUNDING_RADIUS);
 
     Map* map = target->GetMap();
 
@@ -3820,24 +3809,6 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
 
                     return;
                 }
-                case 58983: // Big Blizzard Bear
-                {
-                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
-                        return;
-
-                    // Prevent stacking of mounts and client crashes upon dismounting
-                    unitTarget->RemoveAurasByType(SPELL_AURA_MOUNTED);
-
-                    // Triggered spell id dependent on riding skill
-                    if (uint16 skillval = unitTarget->ToPlayer()->GetSkillValue(SKILL_RIDING))
-                    {
-                        if (skillval >= 150)
-                            unitTarget->CastSpell(unitTarget, 58999, true);
-                        else
-                            unitTarget->CastSpell(unitTarget, 58997, true);
-                    }
-                    return;
-                }
                 case 59317:                                 // Teleporting
                 {
 
@@ -4073,7 +4044,7 @@ void Spell::EffectDuel(SpellEffIndex effIndex)
         return;
     }
 
-    pGameObj->SetUInt32Value(GAMEOBJECT_FACTION, m_caster->getFaction());
+    pGameObj->SetFaction(m_caster->GetFaction());
     pGameObj->SetUInt32Value(GAMEOBJECT_LEVEL, m_caster->getLevel()+1);
     int32 duration = m_spellInfo->GetDuration();
     pGameObj->SetRespawnTime(duration > 0 ? duration/IN_MILLISECONDS : 0);
@@ -4412,7 +4383,7 @@ void Spell::EffectSummonObject(SpellEffIndex effIndex)
         destTarget->GetPosition(x, y, z);
     // Summon in random point all other units if location present
     else
-        m_caster->GetClosePoint(x, y, z, DEFAULT_WORLD_OBJECT_SIZE);
+        m_caster->GetClosePoint(x, y, z, DEFAULT_PLAYER_BOUNDING_RADIUS);
 
     Map* map = m_caster->GetMap();
     G3D::Quat rot = G3D::Matrix3::fromEulerAnglesZYX(m_caster->GetOrientation(), 0.f, 0.f);
@@ -4669,7 +4640,7 @@ void Spell::EffectCharge(SpellEffIndex /*effIndex*/)
         if (m_preGeneratedPath.GetPathType() == PATHFIND_BLANK)
         {
             //unitTarget->GetContactPoint(m_caster, pos.m_positionX, pos.m_positionY, pos.m_positionZ);
-            Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetObjectSize(), unitTarget->GetRelativeAngle(m_caster));
+            Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
             m_caster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed);
         }
         else
@@ -4902,7 +4873,7 @@ void Spell::EffectResurrectPet(SpellEffIndex /*effIndex*/)
         // Reposition the pet's corpse before reviving so as not to grab aggro
         // We can use a different, more accurate version of GetClosePoint() since we have a pet
         float x, y, z; // Will be used later to reposition the pet if we have one
-        player->GetClosePoint(x, y, z, pet->GetObjectSize(), PET_FOLLOW_DIST, pet->GetFollowAngle());
+        player->GetClosePoint(x, y, z, pet->GetCombatReach(), PET_FOLLOW_DIST, pet->GetFollowAngle());
         pet->NearTeleportTo(x, y, z, player->GetOrientation());
         pet->Relocate(x, y, z, player->GetOrientation()); // This is needed so SaveStayPosition() will get the proper coords.
     }
@@ -4910,7 +4881,7 @@ void Spell::EffectResurrectPet(SpellEffIndex /*effIndex*/)
     pet->SetUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_NONE);
     pet->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SKINNABLE);
     pet->setDeathState(ALIVE);
-    pet->ClearUnitState(uint32(UNIT_STATE_ALL_STATE));
+    pet->ClearUnitState(UNIT_STATE_ALL_ERASABLE);
     pet->SetHealth(pet->CountPctFromMaxHealth(damage));
 
     // Reset things for when the AI to takes over
@@ -5051,7 +5022,7 @@ void Spell::EffectTransmitted(SpellEffIndex effIndex)
     else if (m_spellInfo->Effects[effIndex].HasRadius() && m_spellInfo->Speed == 0)
     {
         float dis = m_spellInfo->Effects[effIndex].CalcRadius(m_originalCaster);
-        m_caster->GetClosePoint(fx, fy, fz, DEFAULT_WORLD_OBJECT_SIZE, dis);
+        m_caster->GetClosePoint(fx, fy, fz, DEFAULT_PLAYER_BOUNDING_RADIUS, dis);
     }
     else
     {
@@ -5060,7 +5031,7 @@ void Spell::EffectTransmitted(SpellEffIndex effIndex)
         float max_dis = m_spellInfo->GetMaxRange(true);
         float dis = (float)rand_norm() * (max_dis - min_dis) + min_dis;
 
-        m_caster->GetClosePoint(fx, fy, fz, DEFAULT_WORLD_OBJECT_SIZE, dis);
+        m_caster->GetClosePoint(fx, fy, fz, DEFAULT_PLAYER_BOUNDING_RADIUS, dis);
     }
 
     Map* cMap = m_caster->GetMap();
@@ -5549,7 +5520,7 @@ void Spell::EffectGameObjectDamage(SpellEffIndex /*effIndex*/)
         return;
 
     FactionTemplateEntry const* casterFaction = caster->GetFactionTemplateEntry();
-    FactionTemplateEntry const* targetFaction = sFactionTemplateStore.LookupEntry(gameObjTarget->GetUInt32Value(GAMEOBJECT_FACTION));
+    FactionTemplateEntry const* targetFaction = sFactionTemplateStore.LookupEntry(gameObjTarget->GetFaction());
     // Do not allow to damage GO's of friendly factions (ie: Wintergrasp Walls/Ulduar Storm Beacons)
     if (!targetFaction || (casterFaction && targetFaction && !casterFaction->IsFriendlyTo(*targetFaction)))
         gameObjTarget->ModifyHealth(-damage, caster, GetSpellInfo()->Id);
@@ -5623,7 +5594,7 @@ void Spell::SummonGuardian(uint32 i, uint32 entry, SummonPropertiesEntry const* 
             ((Guardian*)summon)->InitStatsForLevel(level);
 
         if (properties && properties->Category == SUMMON_CATEGORY_ALLY)
-            summon->setFaction(caster->getFaction());
+            summon->SetFaction(caster->GetFaction());
 
         if (summon->HasUnitTypeMask(UNIT_MASK_MINION) && m_targets.HasDst())
             ((Minion*)summon)->SetFollowAngle(m_caster->GetAngle(summon));

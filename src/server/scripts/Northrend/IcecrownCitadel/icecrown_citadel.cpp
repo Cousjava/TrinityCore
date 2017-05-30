@@ -35,7 +35,7 @@
 // * Blood Quickening             (DONE)
 // * Respite for a Tormented Soul
 
-enum Texts
+enum ICCTexts
 {
     // Highlord Tirion Fordring (at Light's Hammer)
     SAY_TIRION_INTRO_1              = 0,
@@ -100,7 +100,7 @@ enum Texts
     SAY_CROK_DEATH                  = 8,
 };
 
-enum Spells
+enum ICCSpells
 {
     // Rotting Frost Giant
     SPELL_DEATH_PLAGUE              = 72879,
@@ -115,7 +115,6 @@ enum Spells
 
     // Alchemist Adrianna
     SPELL_HARVEST_BLIGHT_SPECIMEN   = 72155,
-    SPELL_HARVEST_BLIGHT_SPECIMEN25 = 72162,
 
     // Crok Scourgebane
     SPELL_ICEBOUND_ARMOR            = 70714,
@@ -176,7 +175,7 @@ enum Spells
 #define SPELL_MACHINE_GUN       (IsUndead ? SPELL_MACHINE_GUN_UNDEAD : SPELL_MACHINE_GUN_NORMAL)
 #define SPELL_ROCKET_LAUNCH     (IsUndead ? SPELL_ROCKET_LAUNCH_UNDEAD : SPELL_ROCKET_LAUNCH_NORMAL)
 
-enum EventTypes
+enum ICCEventTypes
 {
     // Highlord Tirion Fordring (at Light's Hammer)
     // The Lich King (at Light's Hammer)
@@ -258,12 +257,12 @@ enum EventTypes
     EVENT_SOUL_MISSILE                  = 55,
 };
 
-enum DataTypesICC
+enum ICCDataTypes
 {
     DATA_DAMNED_KILLS       = 1,
 };
 
-enum Actions
+enum ICCActions
 {
     // Sister Svalna
     ACTION_KILL_CAPTAIN         = 1,
@@ -273,7 +272,7 @@ enum Actions
     ACTION_RESET_EVENT          = 5,
 };
 
-enum EventIds
+enum ICCEventIds
 {
     EVENT_AWAKEN_WARD_1 = 22900,
     EVENT_AWAKEN_WARD_2 = 22907,
@@ -281,7 +280,7 @@ enum EventIds
     EVENT_AWAKEN_WARD_4 = 22909,
 };
 
-enum MovementPoints
+enum ICCMovementPoints
 {
     POINT_LAND  = 1,
 };
@@ -353,7 +352,7 @@ class FrostwingGauntletRespawner
             creature->SetRespawnDelay(2);
 
             if (CreatureData const* data = creature->GetCreatureData())
-                creature->SetPosition(data->posX, data->posY, data->posZ, data->orientation);
+                creature->UpdatePosition(data->posX, data->posY, data->posZ, data->orientation);
             creature->DespawnOrUnsummon();
 
             creature->SetCorpseDelay(corpseDelay);
@@ -717,12 +716,22 @@ class npc_alchemist_adrianna : public CreatureScript
     public:
         npc_alchemist_adrianna() : CreatureScript("npc_alchemist_adrianna") { }
 
-        bool OnGossipHello(Player* player, Creature* creature) override
+        struct npc_alchemist_adriannaAI : public ScriptedAI
         {
-            if (!creature->FindCurrentSpellBySpellId(SPELL_HARVEST_BLIGHT_SPECIMEN) && !creature->FindCurrentSpellBySpellId(SPELL_HARVEST_BLIGHT_SPECIMEN25))
-                if (player->HasAura(SPELL_ORANGE_BLIGHT_RESIDUE) && player->HasAura(SPELL_GREEN_BLIGHT_RESIDUE))
-                    creature->CastSpell(creature, SPELL_HARVEST_BLIGHT_SPECIMEN, false);
-            return false;
+            npc_alchemist_adriannaAI(Creature* creature) : ScriptedAI(creature) { }
+
+            bool GossipHello(Player* player) override
+            {
+                if (!me->FindCurrentSpellBySpellId(sSpellMgr->GetSpellIdForDifficulty(SPELL_HARVEST_BLIGHT_SPECIMEN, me)))
+                    if (player->HasAura(SPELL_ORANGE_BLIGHT_RESIDUE) && player->HasAura(SPELL_GREEN_BLIGHT_RESIDUE))
+                        DoCastSelf(SPELL_HARVEST_BLIGHT_SPECIMEN, false);
+                return false;
+            }
+        };
+
+        CreatureAI* GetAI(Creature* creature) const override
+        {
+            return new npc_alchemist_adriannaAI(creature);
         }
 };
 

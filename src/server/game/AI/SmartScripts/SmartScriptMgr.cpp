@@ -454,6 +454,7 @@ bool SmartAIMgr::IsTargetValid(SmartScriptHolder const& e)
         case SMART_TARGET_STORED:
         case SMART_TARGET_LOOT_RECIPIENTS:
         case SMART_TARGET_FARTHEST:
+        case SMART_TARGET_VEHICLE_ACCESSORY:
             break;
         default:
             TC_LOG_ERROR("sql.sql", "SmartAIMgr: Not handled target_type(%u), Entry %d SourceType %u Event %u Action %u, skipped.", e.GetTargetType(), e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());
@@ -675,15 +676,6 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 if (!IsTextValid(e, e.event.textOver.textGroupID))
                     return false;
                 break;
-            case SMART_EVENT_DUMMY_EFFECT:
-            {
-                if (!IsSpellValid(e, e.event.dummy.spell))
-                    return false;
-
-                if (e.event.dummy.effIndex > EFFECT_2)
-                    return false;
-                break;
-            }
             case SMART_EVENT_IS_BEHIND_TARGET:
             {
                 if (!IsMinMaxValid(e, e.event.behindTarget.cooldownMin, e.event.behindTarget.cooldownMax))
@@ -799,7 +791,7 @@ bool SmartAIMgr::IsEventValid(SmartScriptHolder& e)
                 }
                 break;
             case SMART_EVENT_LINK:
-            case SMART_EVENT_GO_STATE_CHANGED:
+            case SMART_EVENT_GO_LOOT_STATE_CHANGED:
             case SMART_EVENT_GO_EVENT_INFORM:
             case SMART_EVENT_TIMED_EVENT_TRIGGERED:
             case SMART_EVENT_INSTANCE_PLAYER_ENTER:
