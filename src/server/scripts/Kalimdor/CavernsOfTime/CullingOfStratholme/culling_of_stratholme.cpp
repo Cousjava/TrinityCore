@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -258,9 +258,9 @@ class npc_arthas : public CreatureScript
 public:
     npc_arthas() : CreatureScript("npc_arthas") { }
 
-    struct npc_arthasAI : public npc_escortAI
+    struct npc_arthasAI : public EscortAI
     {
-        npc_arthasAI(Creature* creature) : npc_escortAI(creature)
+        npc_arthasAI(Creature* creature) : EscortAI(creature)
         {
             Initialize();
             instance = creature->GetInstanceScript();
@@ -336,10 +336,10 @@ public:
         void AttackStart(Unit* who) override
         {
             if (who && !who->IsImmuneToPC())
-                npc_escortAI::AttackStart(who);
+                EscortAI::AttackStart(who);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             DoCast(me, SPELL_ARTHAS_AURA);
         }
@@ -391,7 +391,7 @@ public:
             ++step;
         }
 
-        void WaypointReached(uint32 waypointId) override
+        void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
         {
             switch (waypointId)
             {
@@ -511,7 +511,7 @@ public:
 
         void UpdateAI(uint32 diff) override
         {
-            npc_escortAI::UpdateAI(diff);
+            EscortAI::UpdateAI(diff);
 
             if (bStepping)
             {
@@ -901,7 +901,7 @@ public:
                                 }
                             }
                             else if (instance->GetBossState(bossEvent) == FAIL)
-                                npc_escortAI::EnterEvadeMode();
+                                EscortAI::EnterEvadeMode();
                             else
                                 phaseTimer = 10000;
                             break;
@@ -1061,7 +1061,7 @@ public:
                                 JumpToNextStep(15000);
                             }
                             else if (instance->GetBossState(DATA_EPOCH) == FAIL)
-                                npc_escortAI::EnterEvadeMode();
+                                EscortAI::EnterEvadeMode();
                             else
                                 phaseTimer = 10000;
                             break;
@@ -1106,7 +1106,7 @@ public:
                                 JumpToNextStep(1000);
                             }
                             else if (instance->GetBossState(DATA_MAL_GANIS) == FAIL)
-                                npc_escortAI::EnterEvadeMode();
+                                EscortAI::EnterEvadeMode();
                             else
                                 phaseTimer = 10000;
                             break;
@@ -1193,10 +1193,10 @@ public:
                     {
                         QuestStatus status = player->GetQuestStatus(13149);
                         if (status != QUEST_STATUS_COMPLETE && status != QUEST_STATUS_REWARDED)
-                            return false;
+                            return true;
                         AddGossipItemFor(player, GOSSIP_ICON_CHAT, GOSSIP_ITEM_ARTHAS_0, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
                         SendGossipMenuFor(player, 907, me->GetGUID());
-                        break; 
+                        break;
                     }
                     case 1:
                         AddGossipItemFor(player, GOSSIP_ICON_CHAT, GOSSIP_ITEM_ARTHAS_1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);

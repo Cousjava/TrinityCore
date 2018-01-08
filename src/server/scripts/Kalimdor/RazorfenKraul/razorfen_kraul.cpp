@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  * Copyright (C) 2006-2013 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -46,9 +46,9 @@ class npc_willix : public CreatureScript
 public:
     npc_willix() : CreatureScript("npc_willix") { }
 
-    struct npc_willixAI : public npc_escortAI
+    struct npc_willixAI : public EscortAI
     {
-        npc_willixAI(Creature* creature) : npc_escortAI(creature) { }
+        npc_willixAI(Creature* creature) : EscortAI(creature) { }
 
         void QuestAccept(Player* player, Quest const* quest) override
         {
@@ -60,7 +60,7 @@ public:
             }
         }
 
-        void WaypointReached(uint32 waypointId) override
+        void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
         {
             Player* player = GetPlayerForEscort();
             if (!player)
@@ -112,7 +112,7 @@ public:
 
         void Reset() override { }
 
-        void EnterCombat(Unit* who) override
+        void JustEngagedWith(Unit* who) override
         {
             Talk(SAY_AGGRO1, who);
         }

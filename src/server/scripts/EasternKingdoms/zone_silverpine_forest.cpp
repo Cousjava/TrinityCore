@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -65,11 +65,11 @@ class npc_deathstalker_erland : public CreatureScript
 public:
     npc_deathstalker_erland() : CreatureScript("npc_deathstalker_erland") { }
 
-    struct npc_deathstalker_erlandAI : public npc_escortAI
+    struct npc_deathstalker_erlandAI : public EscortAI
     {
-        npc_deathstalker_erlandAI(Creature* creature) : npc_escortAI(creature) { }
+        npc_deathstalker_erlandAI(Creature* creature) : EscortAI(creature) { }
 
-        void WaypointReached(uint32 waypointId) override
+        void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
         {
             Player* player = GetPlayerForEscort();
             if (!player)
@@ -112,7 +112,7 @@ public:
 
         void Reset() override { }
 
-        void EnterCombat(Unit* who) override
+        void JustEngagedWith(Unit* who) override
         {
             Talk(SAY_AGGRO, who);
         }
@@ -208,7 +208,7 @@ public:
             }
         }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void JustSummoned(Creature* summoned) override
         {

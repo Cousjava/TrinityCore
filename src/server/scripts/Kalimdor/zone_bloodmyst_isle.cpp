@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -60,7 +60,7 @@ public:
 
         void Reset() override { }
 
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
 
         void AttackStart(Unit* /*who*/) override { }
 
@@ -251,7 +251,7 @@ public:
             me->SetDisplayId(me->GetCreatureTemplate()->Modelid2);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             _events.ScheduleEvent(EVENT_UPPERCUT,      15 * IN_MILLISECONDS);
             _events.ScheduleEvent(EVENT_IMMOLATE,      10 * IN_MILLISECONDS);
@@ -355,9 +355,9 @@ class npc_demolitionist_legoso : public CreatureScript
 public:
     npc_demolitionist_legoso() : CreatureScript("npc_demolitionist_legoso") { }
 
-    struct npc_demolitionist_legosoAI : public npc_escortAI
+    struct npc_demolitionist_legosoAI : public EscortAI
     {
-        npc_demolitionist_legosoAI(Creature* creature) : npc_escortAI(creature)
+        npc_demolitionist_legosoAI(Creature* creature) : EscortAI(creature)
         {
             Initialize();
         }
@@ -466,7 +466,7 @@ public:
             if (HasEscortState(STATE_ESCORT_NONE))
                 return;
 
-            npc_escortAI::UpdateAI(diff);
+            EscortAI::UpdateAI(diff);
 
             if (_phase)
             {
@@ -710,7 +710,7 @@ public:
             }
         }
 
-        void WaypointReached(uint32 waypointId) override
+        void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
         {
             Player* player = GetPlayerForEscort();
             if (!player)

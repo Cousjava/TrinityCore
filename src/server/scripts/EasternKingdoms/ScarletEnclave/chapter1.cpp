@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -135,7 +135,7 @@ public:
             me->LoadEquipment(0, true);
         }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             events.ScheduleEvent(EVENT_ICY_TOUCH, 1000, GCD_CAST);
             events.ScheduleEvent(EVENT_PLAGUE_STRIKE, 3000, GCD_CAST);
@@ -308,7 +308,7 @@ public:
 
         ObjectGuid prisonerGUID;
 
-        void SetGUID(ObjectGuid guid, int32 /*id*/) override
+        void SetGUID(ObjectGuid const& guid, int32 /*id*/) override
         {
             if (!prisonerGUID)
                 prisonerGUID = guid;
@@ -846,7 +846,7 @@ public:
     {
         npc_ros_dark_riderAI(Creature* creature) : ScriptedAI(creature) { }
 
-        void EnterCombat(Unit* /*who*/) override
+        void JustEngagedWith(Unit* /*who*/) override
         {
             me->ExitVehicle();
         }
@@ -1107,9 +1107,9 @@ class npc_scarlet_miner : public CreatureScript
     public:
         npc_scarlet_miner() : CreatureScript("npc_scarlet_miner") { }
 
-        struct npc_scarlet_minerAI : public npc_escortAI
+        struct npc_scarlet_minerAI : public EscortAI
         {
-            npc_scarlet_minerAI(Creature* creature) : npc_escortAI(creature)
+            npc_scarlet_minerAI(Creature* creature) : EscortAI(creature)
             {
                 Initialize();
                 me->SetReactState(REACT_PASSIVE);
@@ -1138,7 +1138,7 @@ class npc_scarlet_miner : public CreatureScript
 
             void InitWaypoint()
             {
-                AddWaypoint(1, 2389.03f,     -5902.74f,     109.014f, 5000);
+                AddWaypoint(1, 2389.03f,     -5902.74f,     109.014f, 0.f, 5000);
                 AddWaypoint(2, 2341.812012f, -5900.484863f, 102.619743f);
                 AddWaypoint(3, 2306.561279f, -5901.738281f, 91.792419f);
                 AddWaypoint(4, 2300.098389f, -5912.618652f, 86.014885f);
@@ -1157,7 +1157,7 @@ class npc_scarlet_miner : public CreatureScript
                     AddWaypoint(14, 2172.516602f, -6146.752441f, 1.074235f);
                     AddWaypoint(15, 2138.918457f, -6158.920898f, 1.342926f);
                     AddWaypoint(16, 2129.866699f, -6174.107910f, 4.380779f);
-                    AddWaypoint(17, 2117.709473f, -6193.830078f, 13.3542f, 10000);
+                    AddWaypoint(17, 2117.709473f, -6193.830078f, 13.3542f, 0.f, 10000);
                 }
                 else
                 {
@@ -1165,18 +1165,18 @@ class npc_scarlet_miner : public CreatureScript
                     AddWaypoint(14, 2234.265625f, -6163.741211f, 0.916021f);
                     AddWaypoint(15, 2268.071777f, -6158.750977f, 1.822252f);
                     AddWaypoint(16, 2270.028320f, -6176.505859f, 6.340538f);
-                    AddWaypoint(17, 2271.739014f, -6195.401855f, 13.3542f, 10000);
+                    AddWaypoint(17, 2271.739014f, -6195.401855f, 13.3542f, 0.f, 10000);
                 }
             }
 
-            void SetGUID(ObjectGuid guid, int32 /*id = 0*/) override
+            void SetGUID(ObjectGuid const& guid, int32 /*id*/) override
             {
                 InitWaypoint();
                 Start(false, false, guid);
                 SetDespawnAtFar(false);
             }
 
-            void WaypointReached(uint32 waypointId) override
+            void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
             {
                 switch (waypointId)
                 {
@@ -1224,7 +1224,7 @@ class npc_scarlet_miner : public CreatureScript
                     else
                         IntroTimer -= diff;
                 }
-                npc_escortAI::UpdateAI(diff);
+                EscortAI::UpdateAI(diff);
             }
         };
 

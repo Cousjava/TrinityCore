@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -36,10 +36,11 @@ class TC_GAME_API MovementGenerator
         virtual void Finalize(Unit*) = 0;
         virtual void Reset(Unit*) = 0;
         virtual bool Update(Unit*, uint32 diff) = 0;
-
         virtual MovementGeneratorType GetMovementGeneratorType() const = 0;
 
         virtual void UnitSpeedChanged() { }
+        virtual void Pause(uint32/* timer = 0*/) { } // timer in ms
+        virtual void Resume(uint32/* overrideTimer = 0*/) { } // timer in ms
 
         // used by Evade code for select point to evade with expected restart default movement
         virtual bool GetResetPosition(Unit*, float& /*x*/, float& /*y*/, float& /*z*/) { return false; }

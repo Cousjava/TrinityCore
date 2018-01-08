@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -94,9 +94,9 @@ public:
         return GetGnomereganAI<npc_blastmaster_emi_shortfuseAI>(creature);
     }
 
-    struct npc_blastmaster_emi_shortfuseAI : public npc_escortAI
+    struct npc_blastmaster_emi_shortfuseAI : public EscortAI
     {
-        npc_blastmaster_emi_shortfuseAI(Creature* creature) : npc_escortAI(creature)
+        npc_blastmaster_emi_shortfuseAI(Creature* creature) : EscortAI(creature)
         {
             instance = creature->GetInstanceScript();
             creature->RestoreFaction();
@@ -219,7 +219,7 @@ public:
             }
         }
 
-        void WaypointReached(uint32 waypointId) override
+        void WaypointReached(uint32 waypointId, uint32 /*pathId*/) override
         {
             //just in case
             if (GetPlayerForEscort())

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
 #include "Common.h"
 #include "Errors.h"
 #include "ObjectGuid.h"
+#include "Optional.h"
 #include "Position.h"
 #include "SharedDefines.h"
 #include <vector>
@@ -31,6 +32,7 @@ class Unit;
 class PathGenerator;
 struct SplineChainLink;
 struct SplineChainResumeInfo;
+struct WaypointPath;
 
 // Creature Entry ID used for waypoints show, visible only for GMs
 #define VISUAL_WAYPOINT 1
@@ -61,9 +63,9 @@ enum MovementGeneratorType : uint8
     MAX_MOTION_TYPE                                       // limit
 };
 
-enum MovementSlot
+enum MovementSlot : uint8
 {
-    MOTION_SLOT_IDLE,
+    MOTION_SLOT_IDLE = 0,
     MOTION_SLOT_ACTIVE,
     MOTION_SLOT_CONTROLLED,
     MAX_MOTION_SLOT
@@ -105,11 +107,12 @@ class TC_GAME_API MotionMaster
         void UpdateMotion(uint32 diff);
 
         void Clear(bool reset = true);
+        void Clear(MovementSlot slot);
         void MovementExpired(bool reset = true);
 
         MovementGeneratorType GetCurrentMovementGeneratorType() const;
-        MovementGeneratorType GetMotionSlotType(int slot) const;
-        MovementGenerator* GetMotionSlot(int slot) const;
+        MovementGeneratorType GetMotionSlotType(MovementSlot slot) const;
+        MovementGenerator* GetMotionSlot(MovementSlot slot) const;
 
         void PropagateSpeedChange();
 
@@ -122,11 +125,11 @@ class TC_GAME_API MotionMaster
         void MoveChase(Unit* target, float dist = 0.0f, float angle = 0.0f);
         void MoveConfused();
         void MoveFleeing(Unit* enemy, uint32 time = 0);
-        void MovePoint(uint32 id, Position const& pos, bool generatePath = true)
+        void MovePoint(uint32 id, Position const& pos, bool generatePath = true, Optional<float> finalOrient = {})
         {
-            MovePoint(id, pos.m_positionX, pos.m_positionY, pos.m_positionZ, generatePath);
+            MovePoint(id, pos.m_positionX, pos.m_positionY, pos.m_positionZ, generatePath, finalOrient);
         }
-        void MovePoint(uint32 id, float x, float y, float z, bool generatePath = true);
+        void MovePoint(uint32 id, float x, float y, float z, bool generatePath = true, Optional<float> finalOrient = {});
 
         /*  Makes the unit move toward the target until it is at a certain distance from it. The unit then stops.
             Only works in 2D.
@@ -159,7 +162,8 @@ class TC_GAME_API MotionMaster
         void MoveSeekAssistanceDistract(uint32 timer);
         void MoveTaxiFlight(uint32 path, uint32 pathnode);
         void MoveDistract(uint32 time);
-        void MovePath(uint32 path_id, bool repeatable);
+        void MovePath(uint32 pathId, bool repeatable);
+        void MovePath(WaypointPath& path, bool repeatable);
         void MoveRotate(uint32 time, RotateDirection direction);
 
         void MoveFormation(uint32 id, Position destination, uint32 moveType, bool forceRun = false, bool forceOrientation = false);
@@ -172,10 +176,12 @@ class TC_GAME_API MotionMaster
         bool NeedInitTop() const;
         void InitTop();
 
-        void Mutate(MovementGenerator *m, MovementSlot slot);
+        void Mutate(MovementGenerator* m, MovementSlot slot);
 
         void DirectClean(bool reset);
         void DelayedClean();
+        void DirectClean(MovementSlot slot);
+        void DelayedClean(MovementSlot slot);
         void DirectExpire(bool reset);
         void DelayedExpire();
         void DirectDelete(MovementGenerator* curr);

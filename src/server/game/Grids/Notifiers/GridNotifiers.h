@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -933,9 +933,9 @@ namespace Trinity
                     return false;
 
                 float searchRadius = i_range;
-                if (i_incOwnRadius) 
+                if (i_incOwnRadius)
                     searchRadius += i_obj->GetCombatReach();
-                if (i_incTargetRadius) 
+                if (i_incTargetRadius)
                     searchRadius += u->GetCombatReach();
 
                 if (!u->IsInMap(i_obj) || !u->InSamePhase(i_obj) || !u->IsWithinDoubleVerticalCylinder(i_obj, searchRadius, searchRadius))
@@ -959,7 +959,7 @@ namespace Trinity
     class AnyGroupedUnitInObjectRangeCheck
     {
         public:
-            AnyGroupedUnitInObjectRangeCheck(WorldObject const* obj, Unit const* funit, float range, bool raid, bool playerOnly = false, bool incOwnRadius = true, bool incTargetRadius = true) 
+            AnyGroupedUnitInObjectRangeCheck(WorldObject const* obj, Unit const* funit, float range, bool raid, bool playerOnly = false, bool incOwnRadius = true, bool incTargetRadius = true)
                 : _source(obj), _refUnit(funit), _range(range), _raid(raid), _playerOnly(playerOnly), i_incOwnRadius(incOwnRadius), i_incTargetRadius(incTargetRadius) { }
 
             bool operator()(Unit* u) const
@@ -982,9 +982,9 @@ namespace Trinity
                     return false;
 
                 float searchRadius = _range;
-                if (i_incOwnRadius) 
+                if (i_incOwnRadius)
                     searchRadius += _source->GetCombatReach();
-                if (i_incTargetRadius) 
+                if (i_incTargetRadius)
                     searchRadius += u->GetCombatReach();
 
                 return u->IsInMap(_source) && u->InSamePhase(_source) && u->IsWithinDoubleVerticalCylinder(_source, searchRadius, searchRadius);
@@ -1027,7 +1027,7 @@ namespace Trinity
             bool operator()(Unit* u)
             {
                 if (u->isTargetableForAttack() && i_obj->IsWithinDistInMap(u, i_range) &&
-                    !i_funit->IsFriendlyTo(u) && i_funit->CanSeeOrDetect(u))
+                    (i_funit->IsInCombatWith(u) || i_funit->IsHostileTo(u)) && i_obj->CanSeeOrDetect(u))
                 {
                     i_range = i_obj->GetDistance(u);        // use found unit range as new range limit for next check
                     return true;
@@ -1069,9 +1069,9 @@ namespace Trinity
                     return false;
 
                 float searchRadius = i_range;
-                if (i_incOwnRadius) 
+                if (i_incOwnRadius)
                     searchRadius += i_obj->GetCombatReach();
-                if (i_incTargetRadius) 
+                if (i_incTargetRadius)
                     searchRadius += u->GetCombatReach();
 
                 return u->IsInMap(i_obj) && u->InSamePhase(i_obj) && u->IsWithinDoubleVerticalCylinder(i_obj, searchRadius, searchRadius);

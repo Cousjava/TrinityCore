@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,7 +18,6 @@
 
 #include "RandomMovementGenerator.h"
 #include "Creature.h"
-#include "CreatureGroups.h"
 #include "Map.h"
 #include "MoveSplineInit.h"
 #include "MoveSpline.h"
@@ -116,8 +115,7 @@ void RandomMovementGenerator<Creature>::SetRandomLocation(Creature* owner)
     _timer.Reset(traveltime + resetTimer);
 
     // Call for creature group update
-    if (owner->GetFormation() && owner->GetFormation()->getLeader() == owner)
-        owner->GetFormation()->LeaderMoveTo(position);
+    owner->SignalFormationMovement(position);
 }
 
 template<class T>

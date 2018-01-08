@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2018 TrinityCore <https://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -31,15 +31,12 @@ enum Phases
     PHASE_NOT_ENGAGED       = 1,
     PHASE_PETS,
     PHASE_TRANSITION,
-    PHASE_THADDIUS,
-    PHASE_RESETTING
+    PHASE_THADDIUS
 };
 
 enum AIActions
 {
-    ACTION_RESET_ENCOUNTER_TIMER = -1, // sent from instance AI
     ACTION_BEGIN_RESET_ENCOUNTER =  0, // sent from thaddius to pets to trigger despawn and encounter reset
-    ACTION_RESET_ENCOUNTER, // sent from thaddius to pets to trigger respawn and full reset
     ACTION_FEUGEN_DIED, // sent from respective pet to thaddius to indicate death
     ACTION_STALAGG_DIED, // ^
     ACTION_FEUGEN_RESET, // pet to thaddius
@@ -171,9 +168,6 @@ struct boss_thaddius : public BossAI
             {
                 events.SetPhase(PHASE_NOT_ENGAGED);
                 SetCombatMovement(false);
-
-                // initialize everything properly, and ensure that the coils are loaded by the time we initialize
-                BeginResetEncounter(true);
             }
         }
 
@@ -204,9 +198,9 @@ struct boss_thaddius : public BossAI
                 return false;
         }
 
-        void JustRespawned() override
+        void JustAppeared() override
         {
-            if (events.IsInPhase(PHASE_RESETTING))
+            if (instance->GetBossState(BOSS_THADDIUS) != DONE)
                 ResetEncounter();
         }
 
@@ -225,22 +219,13 @@ struct boss_thaddius : public BossAI
         {
             switch (action)
             {
-                case ACTION_RESET_ENCOUNTER_TIMER:
-                    if (events.IsInPhase(PHASE_RESETTING))
-                        ResetEncounter();
-                    break;
                 case ACTION_FEUGEN_RESET:
                 case ACTION_STALAGG_RESET:
-                    if (!events.IsInPhase(PHASE_NOT_ENGAGED) && !events.IsInPhase(PHASE_RESETTING))
+                    if (!events.IsInPhase(PHASE_NOT_ENGAGED))
                         BeginResetEncounter();
                     break;
                 case ACTION_FEUGEN_AGGRO:
                 case ACTION_STALAGG_AGGRO:
-                    if (events.IsInPhase(PHASE_RESETTING))
-                    {
-                        BeginResetEncounter();
-                        return;
-                    }
                     if (!events.IsInPhase(PHASE_NOT_ENGAGED))
                         return;
                     events.SetPhase(PHASE_PETS);
@@ -306,29 +291,24 @@ struct boss_thaddius : public BossAI
             events.ScheduleEvent(EVENT_TRANSITION_3, Seconds(14), 0, PHASE_TRANSITION);
         }
 
-        void BeginResetEncounter(bool initial = false)
+        void BeginResetEncounter()
         {
             if (instance->GetBossState(BOSS_THADDIUS) == DONE)
-                return;
-            if (events.IsInPhase(PHASE_RESETTING))
                 return;
 
             // remove polarity shift debuffs on reset
             instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_POSITIVE_CHARGE_APPLY);
             instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_NEGATIVE_CHARGE_APPLY);
 
-            me->DespawnOrUnsummon();
-            me->SetRespawnTime(initial ? 5 : 30);
+            me->DespawnOrUnsummon(0, Seconds(30));
 
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_STUNNED);
             me->SetImmuneToPC(true);
-            events.SetPhase(PHASE_RESETTING);
+            me->setActive(false);
             if (Creature* feugen = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_FEUGEN)))
                 feugen->AI()->DoAction(ACTION_BEGIN_RESET_ENCOUNTER);
             if (Creature* stalagg = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_STALAGG)))
                 stalagg->AI()->DoAction(ACTION_BEGIN_RESET_ENCOUNTER);
-
-            me->setActive(false);
         }
 
         void ResetEncounter()
@@ -340,10 +320,9 @@ struct boss_thaddius : public BossAI
             events.SetPhase(PHASE_NOT_ENGAGED);
             me->SetReactState(REACT_PASSIVE);
 
-            if (Creature* feugen = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_FEUGEN)))
-                feugen->AI()->DoAction(ACTION_RESET_ENCOUNTER);
-            if (Creature* stalagg = ObjectAccessor::GetCreature(*me, instance->GetGuidData(DATA_STALAGG)))
-                stalagg->AI()->DoAction(ACTION_RESET_ENCOUNTER);
+            // @todo these guys should really be moved to a summon group - this is merely a hack to make them work in dynamic_spawning
+            instance->instance->RemoveRespawnTime(SPAWN_TYPE_CREATURE, 130958, true); // Stalagg
+            instance->instance->RemoveRespawnTime(SPAWN_TYPE_CREATURE, 130959, true); // Feugen
         }
 
         void UpdateAI(uint32 diff) override
@@ -515,7 +494,7 @@ public:
             {
                 if (GameObject* coil = myCoilGO())
                     coil->SetGoState(GO_STATE_READY);
-                me->DespawnOrUnsummon();
+                me->DespawnOrUnsummon(0, Hours(24*7)); // will be force respawned by thaddius
                 me->setActive(false);
             }
 
@@ -531,9 +510,6 @@ public:
                 {
                     case ACTION_BEGIN_RESET_ENCOUNTER:
                         BeginResetEncounter();
-                        break;
-                    case ACTION_RESET_ENCOUNTER:
-                        ResetEncounter();
                         break;
                     case ACTION_STALAGG_REVIVING_FX:
                         break;
@@ -559,7 +535,7 @@ public:
                         break;
                     case ACTION_TRANSITION:
                         me->KillSelf(); // true death
-                        me->DespawnOrUnsummon();
+                        me->DespawnOrUnsummon(0, Hours(24*7));
 
                         if (Creature* coil = myCoil())
                         {
@@ -587,7 +563,7 @@ public:
                     Talk(SAY_STALAGG_SLAY);
             }
 
-            void EnterCombat(Unit* who) override
+            void JustEngagedWith(Unit* who) override
             {
                 Talk(SAY_STALAGG_AGGRO);
 
@@ -781,14 +757,8 @@ public:
             {
                 if (GameObject* coil = myCoilGO())
                     coil->SetGoState(GO_STATE_READY);
-                me->DespawnOrUnsummon();
+                me->DespawnOrUnsummon(0, Hours(24*7)); // will be force respawned by thaddius
                 me->setActive(false);
-            }
-
-            void ResetEncounter()
-            {
-                me->Respawn(true);
-                Initialize();
             }
 
             void DoAction(int32 action) override
@@ -797,9 +767,6 @@ public:
                 {
                     case ACTION_BEGIN_RESET_ENCOUNTER:
                         BeginResetEncounter();
-                        break;
-                    case ACTION_RESET_ENCOUNTER:
-                        ResetEncounter();
                         break;
                     case ACTION_FEUGEN_REVIVING_FX:
                         break;
@@ -827,7 +794,7 @@ public:
                         break;
                     case ACTION_TRANSITION:
                         me->KillSelf(); // true death this time around
-                        me->DespawnOrUnsummon();
+                        me->DespawnOrUnsummon(0, Hours(24*7));
 
                         if (Creature* coil = myCoil())
                         {
@@ -854,7 +821,7 @@ public:
                     Talk(SAY_FEUGEN_SLAY);
             }
 
-            void EnterCombat(Unit* who) override
+            void JustEngagedWith(Unit* who) override
             {
                 Talk(SAY_FEUGEN_AGGRO);
 
@@ -1014,7 +981,7 @@ public:
 
         void EnterEvadeMode(EvadeReason /*why*/) override { } // never stop casting due to evade
         void UpdateAI(uint32 /*diff*/) override { } // never do anything unless told
-        void EnterCombat(Unit* /*who*/) override { }
+        void JustEngagedWith(Unit* /*who*/) override { }
         void DamageTaken(Unit* /*who*/, uint32& damage) override { damage = 0; } // no, you can't kill it
     };
 };
@@ -1258,20 +1225,19 @@ class spell_thaddius_magnetic_pull : public SpellScriptLoader
         }
 };
 
-class at_thaddius_entrance : public AreaTriggerScript
+class at_thaddius_entrance : public OnlyOnceAreaTriggerScript
 {
     public:
-        at_thaddius_entrance() : AreaTriggerScript("at_thaddius_entrance") { }
+        at_thaddius_entrance() : OnlyOnceAreaTriggerScript("at_thaddius_entrance") { }
 
-        bool OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/) override
+        bool _OnTrigger(Player* player, AreaTriggerEntry const* /*areaTrigger*/) override
         {
             InstanceScript* instance = player->GetInstanceScript();
-            if (!instance || instance->GetData(DATA_HAD_THADDIUS_GREET) || instance->GetBossState(BOSS_THADDIUS) == DONE)
+            if (!instance || instance->GetBossState(BOSS_THADDIUS) == DONE)
                 return true;
 
             if (Creature* thaddius = ObjectAccessor::GetCreature(*player, instance->GetGuidData(DATA_THADDIUS)))
                 thaddius->AI()->Talk(SAY_GREET);
-            instance->SetData(DATA_HAD_THADDIUS_GREET, 1u);
 
             return true;
         }
